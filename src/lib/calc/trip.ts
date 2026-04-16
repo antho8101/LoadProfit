@@ -47,12 +47,18 @@ export function calculateTrip(inputs: TripInputs): TripCalculationResult {
 
   return {
     operationalDistanceKm: opDist,
+    oneWayDistanceKm: oneWay,
     totalRevenue,
     totalCost,
     profit,
     minimumProfitablePrice,
     marginPercent: m !== null && Number.isFinite(m) ? m : null,
     status,
+    distanceSource: inputs.distanceSource,
+    routeDurationMinutes:
+      inputs.routeDurationMinutes === undefined
+        ? null
+        : inputs.routeDurationMinutes,
     emptyReturnImpact: {
       extraKm,
       extraCost,

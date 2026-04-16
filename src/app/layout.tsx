@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "@/contexts/auth-context";
+import { LocaleProvider } from "@/contexts/locale-context";
+import { FirebaseConfigScript } from "@/components/firebase-config-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,6 +21,13 @@ export const metadata: Metadata = {
     "Estimate whether a haulage job is profitable before you accept it.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +38,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased font-sans`}
       >
-        {children}
+        <FirebaseConfigScript />
+        <AuthProvider>
+          <LocaleProvider>{children}</LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

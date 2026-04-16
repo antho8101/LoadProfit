@@ -28,4 +28,112 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  -webkit-tap-highlight-color: color-mix(
+    in srgb,
+    var(--accent) 18%,
+    transparent
+  );
+}
+
+@keyframes magic-rainbow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Halo arc-en-ciel — respiration d’opacité (dégradé déjà géré par blur + mask) */
+@keyframes magic-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.52;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+/* Particules : scintillement + petite dérive */
+@keyframes magic-sparkle-float {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translate(0, 0) scale(0.75);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(3px, -4px) scale(1.1);
+  }
+  35% {
+    opacity: 0.8;
+    transform: translate(-2px, 3px) scale(0.88);
+  }
+  55% {
+    opacity: 0.95;
+    transform: translate(4px, 2px) scale(1.05);
+  }
+  75% {
+    opacity: 0.7;
+    transform: translate(-3px, -2px) scale(0.92);
+  }
+}
+
+/* Léger pulse du libellé (très discret) */
+@keyframes magic-btn-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.018);
+  }
+}
+
+@keyframes magic-btn-breathe-subtle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.006);
+  }
+}
+
+.animate-magic-rainbow {
+  animation: magic-rainbow 2.4s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.animate-magic-aura-pulse {
+  animation: magic-aura-pulse 2.8s ease-in-out infinite;
+}
+
+/* Masque radial : halo serré autour du bouton, fade rapide vers l’extérieur */
+.magic-aura-mask {
+  -webkit-mask-image: radial-gradient(
+    ellipse 82% 100% at center,
+    transparent 22%,
+    rgba(0, 0, 0, 0.75) 44%,
+    rgba(0, 0, 0, 0.28) 58%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    ellipse 82% 100% at center,
+    transparent 22%,
+    rgba(0, 0, 0, 0.75) 44%,
+    rgba(0, 0, 0, 0.28) 58%,
+    transparent 72%
+  );
+}
+
+.animate-magic-sparkle-float {
+  animation: magic-sparkle-float 2.4s ease-in-out infinite;
+}
+
+.animate-magic-btn-breathe {
+  animation: magic-btn-breathe 2.6s ease-in-out infinite;
+}
+
+.animate-magic-btn-breathe-subtle {
+  animation: magic-btn-breathe-subtle 2.8s ease-in-out infinite;
 }

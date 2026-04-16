@@ -21,6 +21,28 @@ export type VehicleCostBreakdown = {
 };
 
 /**
+ * Total €/km for a saved vehicle if the **effective** fuel price (€/L) is replaced
+ * (e.g. trip-level override) while keeping consumption and fixed costs unchanged.
+ */
+export function computeTotalCostPerKmWithEffectiveFuel(
+  vehicle: Pick<
+    VehicleCostInputs,
+    | "averageConsumptionLPer100Km"
+    | "monthlyInsurance"
+    | "monthlyMaintenance"
+    | "monthlyTires"
+    | "monthlyOtherFixedCosts"
+    | "estimatedMonthlyKm"
+  >,
+  effectiveFuelPricePerLiter: number,
+): number {
+  return computeVehicleCosts({
+    ...vehicle,
+    fuelPricePerLiter: effectiveFuelPricePerLiter,
+  }).totalCostPerKm;
+}
+
+/**
  * Requires validated inputs: estimatedMonthlyKm > 0, non-negative amounts where applicable.
  */
 export function computeVehicleCosts(

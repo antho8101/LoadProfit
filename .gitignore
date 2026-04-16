@@ -28,7 +28,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files (clés API locales — ne pas committer)
+.env
 .env*.local
 
 # vercel

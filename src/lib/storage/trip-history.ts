@@ -1,21 +1,37 @@
-import type { SavedTrip } from "@/types/trip";
+import type { SavedTrip, TripDecision } from "@/types/trip";
 
 const STORAGE_KEY = "loadprofit-trips-v1";
 const MAX_TRIPS = 100;
 
 function hasCoreSavedFields(o: Record<string, unknown>): boolean {
-  return (
-    typeof o.id === "string" &&
-    typeof o.savedAt === "string" &&
-    typeof o.departureCity === "string" &&
-    typeof o.arrivalCity === "string" &&
-    typeof o.offeredPrice === "number" &&
-    typeof o.totalCost === "number" &&
-    typeof o.profit === "number" &&
-    (o.status === "profitable" ||
+  if (
+    typeof o.id !== "string" ||
+    typeof o.departureCity !== "string" ||
+    typeof o.arrivalCity !== "string" ||
+    typeof o.offeredPrice !== "number" ||
+    typeof o.totalCost !== "number" ||
+    typeof o.profit !== "number" ||
+    !(
+      o.status === "profitable" ||
       o.status === "low_margin" ||
-      o.status === "loss")
-  );
+      o.status === "loss"
+    )
+  ) {
+    return false;
+  }
+  const hasCreated =
+    typeof o.createdAt === "string" || typeof o.savedAt === "string";
+  if (!hasCreated) return false;
+  if (o.decision !== undefined) {
+    if (
+      o.decision !== "accepted" &&
+      o.decision !== "declined" &&
+      o.decision !== "pending"
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Normalize legacy rows missing V1.1 fields */
@@ -33,9 +49,29 @@ function normalizeSavedTrip(o: Record<string, unknown>): SavedTrip | null {
   const vehicleName =
     typeof o.vehicleName === "string" ? o.vehicleName : null;
 
+  const createdAtRaw = o.createdAt ?? o.savedAt;
+  const createdAt =
+    typeof createdAtRaw === "string" ? createdAtRaw : new Date(0).toISOString();
+
+  let decision: TripDecision = "pending";
+  if (
+    o.decision === "accepted" ||
+    o.decision === "declined" ||
+    o.decision === "pending"
+  ) {
+    decision = o.decision;
+  }
+
+  const calcKey = typeof o.calcKey === "string" ? o.calcKey : undefined;
+
+  const vehicleIdRaw = o.vehicleId;
+  const vehicleId =
+    typeof vehicleIdRaw === "string" ? vehicleIdRaw : null;
+
   return {
     id: o.id as string,
-    savedAt: o.savedAt as string,
+    createdAt,
+    savedAt: typeof o.savedAt === "string" ? o.savedAt : undefined,
     departureCity: o.departureCity as string,
     arrivalCity: o.arrivalCity as string,
     offeredPrice: o.offeredPrice as number,
@@ -46,6 +82,9 @@ function normalizeSavedTrip(o: Record<string, unknown>): SavedTrip | null {
     emptyReturn: typeof o.emptyReturn === "boolean" ? o.emptyReturn : false,
     marginPercent,
     vehicleName,
+    vehicleId,
+    decision,
+    calcKey,
   };
 }
 

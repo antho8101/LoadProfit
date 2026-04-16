@@ -8,8 +8,7 @@
  * not a route-level or rebate-adjusted price.
  */
 
-const DATASET_RECORDS_URL =
-  "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?limit=10000";
+import { getFuelDatasetResults } from "@/lib/fuel/dataset";
 
 /** Used when the API is down, parsing fails, or too few valid samples. */
 export const FRANCE_FUEL_FALLBACK = {
@@ -32,7 +31,7 @@ function toPositivePrice(x: unknown): number | null {
 }
 
 /** Mean of SP95, E10, SP98 at this station (only grades that are reported). */
-function petrolStationIndex(row: Record<string, unknown>): number | null {
+export function petrolStationIndex(row: Record<string, unknown>): number | null {
   const vals = [
     toPositivePrice(row.sp95_prix),
     toPositivePrice(row.e10_prix),
@@ -85,32 +84,8 @@ export async function fetchFranceFuelAverages(): Promise<FranceFuelResult> {
   const updatedAt = new Date().toISOString();
 
   try {
-    const res = await fetch(DATASET_RECORDS_URL, {
-      signal: AbortSignal.timeout(45_000),
-      headers: { Accept: "application/json" },
-    });
-
-    if (!res.ok) {
-      return {
-        diesel: FRANCE_FUEL_FALLBACK.diesel,
-        petrol: FRANCE_FUEL_FALLBACK.petrol,
-        source: "fallback",
-        updatedAt,
-      };
-    }
-
-    const json: unknown = await res.json();
-    if (!json || typeof json !== "object") {
-      return {
-        diesel: FRANCE_FUEL_FALLBACK.diesel,
-        petrol: FRANCE_FUEL_FALLBACK.petrol,
-        source: "fallback",
-        updatedAt,
-      };
-    }
-
-    const results = (json as Record<string, unknown>).results;
-    if (!Array.isArray(results)) {
+    const results = await getFuelDatasetResults();
+    if (!results) {
       return {
         diesel: FRANCE_FUEL_FALLBACK.diesel,
         petrol: FRANCE_FUEL_FALLBACK.petrol,

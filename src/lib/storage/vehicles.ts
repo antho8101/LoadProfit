@@ -1,5 +1,6 @@
 import type { VehicleProfile, VehicleStored } from "@/types/vehicle";
 import { computeVehicleCosts } from "@/lib/calc/vehicle";
+import { FRANCE_FUEL_FALLBACK } from "@/lib/fuel/france-average";
 
 const STORAGE_KEY = "loadprofit-vehicles-v1";
 
@@ -8,7 +9,11 @@ function isFuelType(x: unknown): x is VehicleStored["fuelType"] {
 }
 
 function isFuelPriceSource(x: unknown): x is VehicleStored["fuelPriceSource"] {
-  return x === "manual" || x === "france_average";
+  return (
+    x === "manual" ||
+    x === "france_average" ||
+    x === "near_my_location"
+  );
 }
 
 function isFiniteNonNeg(n: unknown): n is number {
@@ -61,9 +66,24 @@ function normalizeVehicleStored(o: Record<string, unknown>): VehicleStored | nul
   };
 }
 
+/**
+ * Synchronous enrichment for first paint / localStorage round-trip.
+ * Automatic sources ignore any old snapshot in storage — use a static fallback
+ * until `enrichAllVehiclesWithLiveFuel` returns current benchmarks.
+ */
 export function enrichVehicle(stored: VehicleStored): VehicleProfile {
+  let baseFuel: number;
+  if (stored.fuelPriceSource === "manual") {
+    baseFuel = stored.fuelPricePerLiter;
+  } else {
+    baseFuel =
+      stored.fuelType === "diesel"
+        ? FRANCE_FUEL_FALLBACK.diesel
+        : FRANCE_FUEL_FALLBACK.petrol;
+  }
+
   const effectiveFuelPricePerLiter =
-    stored.fuelPricePerLiter + stored.fuelAdjustmentPerLiter;
+    baseFuel + stored.fuelAdjustmentPerLiter;
   const { fuelCostPerKm, fixedCostPerKm, totalCostPerKm } = computeVehicleCosts(
     {
       averageConsumptionLPer100Km: stored.averageConsumptionLPer100Km,
@@ -75,7 +95,16 @@ export function enrichVehicle(stored: VehicleStored): VehicleProfile {
       estimatedMonthlyKm: stored.estimatedMonthlyKm,
     },
   );
-  return { ...stored, fuelCostPerKm, fixedCostPerKm, totalCostPerKm };
+  return {
+    ...stored,
+    fuelPricePerLiter:
+      stored.fuelPriceSource === "manual"
+        ? stored.fuelPricePerLiter
+        : baseFuel,
+    fuelCostPerKm,
+    fixedCostPerKm,
+    totalCostPerKm,
+  };
 }
 
 function parseStoredList(raw: string | null): VehicleStored[] {
@@ -96,11 +125,13 @@ function parseStoredList(raw: string | null): VehicleStored[] {
   }
 }
 
-export function loadVehicles(): VehicleProfile[] {
+export function loadVehiclesStored(): VehicleStored[] {
   if (typeof window === "undefined") return [];
-  return parseStoredList(window.localStorage.getItem(STORAGE_KEY)).map(
-    enrichVehicle,
-  );
+  return parseStoredList(window.localStorage.getItem(STORAGE_KEY));
+}
+
+export function loadVehicles(): VehicleProfile[] {
+  return loadVehiclesStored().map(enrichVehicle);
 }
 
 function saveStoredList(list: VehicleStored[]): void {

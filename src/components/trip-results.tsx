@@ -1,49 +1,82 @@
 "use client";
 
 import type { TripCalculationResult } from "@/types/trip";
-import { formatEur, formatKm, formatPercent } from "@/lib/format";
+import { interpolate, translate } from "@/lib/i18n/catalog";
+import { useLocale } from "@/contexts/locale-context";
+import {
+  formatDurationDriving,
+  formatEur,
+  formatKm,
+  formatPercent,
+} from "@/lib/format";
 import { ProfitabilityBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { UiLocale } from "@/lib/i18n/locale-types";
 
-function decisionMessage(result: TripCalculationResult): string {
+function decisionMessage(
+  result: TripCalculationResult,
+  locale: UiLocale,
+): string {
   switch (result.status) {
     case "profitable":
-      return `This trip would make you an estimated profit of ${formatEur(result.profit)}.`;
+      return interpolate(translate(locale, "result_msg_profitable"), {
+        amount: formatEur(result.profit),
+      });
     case "low_margin":
-      return "This trip is profitable, but the margin is very low.";
+      return translate(locale, "result_msg_lowMargin");
     case "loss": {
       const loss = Math.abs(result.profit);
-      return `You would lose an estimated ${formatEur(loss)} on this trip.`;
+      return interpolate(translate(locale, "result_msg_loss"), {
+        amount: formatEur(loss),
+      });
     }
     default:
       return "";
   }
 }
 
+function formatComputedAt(ts: number, locale: UiLocale): string {
+  try {
+    return new Intl.DateTimeFormat(locale === "fr" ? "fr-FR" : "en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(ts));
+  } catch {
+    return "";
+  }
+}
+
 export function TripResults({
   result,
-  onSave,
-  showSave,
-  saveDisabled,
-  saveHint,
+  onAccept,
+  onDecline,
+  showDecisionActions,
+  decisionDisabled,
+  decisionHint,
+  computedAtMs,
 }: {
   result: TripCalculationResult | null;
-  onSave: () => void;
-  showSave: boolean;
-  saveDisabled: boolean;
-  saveHint?: string;
+  onAccept: () => void;
+  onDecline: () => void;
+  showDecisionActions: boolean;
+  decisionDisabled: boolean;
+  decisionHint?: string;
+  /** When this estimate was produced (client clock). */
+  computedAtMs?: number | null;
 }) {
+  const { t, effectiveLocale } = useLocale();
+
   if (!result) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Result</CardTitle>
+          <CardTitle>{t("result_title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-[var(--muted)]">
-            Fill in the trip details and click <strong>Calculate Profit</strong>{" "}
-            to see whether the job is worth taking.
+            {t("result_empty")}{" "}
+            <strong>{t("result_emptyStrong")}</strong> {t("result_emptyEnd")}
           </p>
         </CardContent>
       </Card>
@@ -53,18 +86,55 @@ export function TripResults({
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle>Result</CardTitle>
+        <div>
+          <CardTitle className="text-lg tracking-tight">{t("result_title")}</CardTitle>
+          {computedAtMs ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {t("result_estimateAt")} {formatComputedAt(computedAtMs, effectiveLocale)}
+            </p>
+          ) : null}
+        </div>
         <ProfitabilityBadge status={result.status} />
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-md border border-[var(--border)] bg-neutral-50 p-4 text-base font-medium leading-snug dark:bg-neutral-950">
-          {decisionMessage(result)}
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+            {t("result_distance")}
+          </p>
+          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-[var(--foreground)]">
+            {formatKm(result.oneWayDistanceKm)}
+          </p>
+          {result.distanceSource === "google_routes" &&
+          result.routeDurationMinutes !== null &&
+          result.routeDurationMinutes !== undefined ? (
+            <p className="mt-3 text-sm text-[var(--foreground)]">
+              <span className="text-[var(--muted)]">{t("result_drivingTime")} </span>
+              <span className="font-semibold tabular-nums">
+                {formatDurationDriving(result.routeDurationMinutes)}
+              </span>
+            </p>
+          ) : null}
+          <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+            {result.distanceSource === "google_routes"
+              ? t("result_routeGoogle")
+              : result.distanceSource === "manual"
+                ? t("result_routeManual")
+                : null}
+          </p>
         </div>
+
+        <div className="rounded-md border border-[var(--border)] bg-neutral-50 p-4 text-base font-medium leading-snug dark:bg-neutral-950">
+          {decisionMessage(result, effectiveLocale)}
+        </div>
+
+        <p className="text-xs leading-relaxed text-[var(--muted)]">
+          {t("result_transparency")}
+        </p>
 
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Operating distance
+              {t("result_opDistance")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatKm(result.operationalDistanceKm)}
@@ -72,7 +142,7 @@ export function TripResults({
           </div>
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Revenue (offered price)
+              {t("result_revenue")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatEur(result.totalRevenue)}
@@ -80,7 +150,7 @@ export function TripResults({
           </div>
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Estimated total cost
+              {t("result_totalCost")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatEur(result.totalCost)}
@@ -88,7 +158,7 @@ export function TripResults({
           </div>
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Estimated profit
+              {t("result_profit")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatEur(result.profit)}
@@ -96,7 +166,7 @@ export function TripResults({
           </div>
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Minimum price to break even
+              {t("result_minPrice")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatEur(result.minimumProfitablePrice)}
@@ -104,7 +174,7 @@ export function TripResults({
           </div>
           <div>
             <dt className="text-xs font-medium uppercase text-[var(--muted)]">
-              Margin on offered price
+              {t("result_margin")}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">
               {formatPercent(result.marginPercent)}
@@ -112,39 +182,52 @@ export function TripResults({
           </div>
         </dl>
 
-        {showSave ? (
+        {showDecisionActions ? (
           <div className="space-y-2 border-t border-[var(--border)] pt-4">
-            <Button
-              type="button"
-              variant="default"
-              className="w-full sm:w-auto"
-              disabled={saveDisabled}
-              onClick={onSave}
-            >
-              Save this trip
-            </Button>
-            {saveHint ? (
-              <p className="text-xs text-[var(--muted)]">{saveHint}</p>
+            <p className="text-sm font-medium text-[var(--foreground)]">
+              {t("result_recordDecision")}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="default"
+                className="w-full sm:flex-1"
+                disabled={decisionDisabled}
+                onClick={onAccept}
+              >
+                {t("result_accept")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:flex-1"
+                disabled={decisionDisabled}
+                onClick={onDecline}
+              >
+                {t("result_decline")}
+              </Button>
+            </div>
+            {decisionHint ? (
+              <p className="text-xs text-[var(--muted)]">{decisionHint}</p>
             ) : null}
           </div>
         ) : null}
 
         <div className="rounded-md border border-[var(--border)] bg-neutral-50 p-4 text-sm dark:bg-neutral-950">
-          <p className="font-medium">Empty return</p>
+          <p className="font-medium">{t("result_emptyReturn")}</p>
           <p className="mt-1 text-[var(--muted)]">
-            Extra kilometers:{" "}
+            {t("result_extraKm")}{" "}
             <span className="font-medium text-[var(--foreground)]">
               {formatKm(result.emptyReturnImpact.extraKm)}
             </span>
             {" · "}
-            Extra estimated cost:{" "}
+            {t("result_extraCost")}{" "}
             <span className="font-medium text-[var(--foreground)]">
               {formatEur(result.emptyReturnImpact.extraCost)}
             </span>
           </p>
           <p className="mt-2 text-xs text-[var(--muted)]">
-            If empty return is off, these amounts are zero (distance is not
-            doubled).
+            {t("result_emptyReturnNote")}
           </p>
         </div>
       </CardContent>

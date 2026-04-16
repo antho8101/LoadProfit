@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { VehicleProfile } from "@/types/vehicle";
+import { useLocale } from "@/contexts/locale-context";
+import { interpolate } from "@/lib/i18n/catalog";
+import type { VehicleProfile, VehicleStored } from "@/types/vehicle";
 import { VehicleForm } from "@/components/vehicle-form";
 import { VehicleList } from "@/components/vehicle-list";
 import { cn } from "@/lib/utils";
 
 type Props = {
   vehicles: VehicleProfile[];
-  onVehiclesChange: (next: VehicleProfile[]) => void;
+  userCoords: { lat: number; lng: number } | null;
+  persistVehicle: (v: VehicleStored) => Promise<void>;
+  removeVehicle: (id: string) => Promise<void>;
+  /** When opened from the Vehicles page, start expanded. */
+  initialOpen?: boolean;
 };
 
 /**
@@ -16,8 +22,15 @@ type Props = {
  * calculator stays in focus. Opens automatically only when the last vehicle is
  * removed; closes after the first vehicle is saved (0 → 1).
  */
-export function VehicleSettingsPanel({ vehicles, onVehiclesChange }: Props) {
-  const [open, setOpen] = useState(false);
+export function VehicleSettingsPanel({
+  vehicles,
+  userCoords,
+  persistVehicle,
+  removeVehicle,
+  initialOpen = false,
+}: Props) {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(initialOpen);
   const prevCount = useRef<number | null>(null);
 
   useEffect(() => {
@@ -35,8 +48,11 @@ export function VehicleSettingsPanel({ vehicles, onVehiclesChange }: Props) {
   const count = vehicles.length;
   const summaryTitle =
     count === 0
-      ? "Vehicle setup"
-      : `Vehicle setup — ${count} vehicle${count === 1 ? "" : "s"}`;
+      ? t("settings_vehicleSetup")
+      : interpolate(
+          t(count === 1 ? "settings_vehicleSetupCount" : "settings_vehicleSetupCountPlural"),
+          { count },
+        );
 
   return (
     <div
@@ -77,9 +93,7 @@ export function VehicleSettingsPanel({ vehicles, onVehiclesChange }: Props) {
             {summaryTitle}
           </span>
           <span className="mt-0.5 block text-xs text-[var(--muted)]">
-            {count === 0
-              ? "Expand to add a truck profile (fuel + monthly fixed costs). Then choose it in the calculator below."
-              : "Expand only when you need to add or remove a profile."}
+            {count === 0 ? t("settings_expandEmpty") : t("settings_expandHas")}
           </span>
         </span>
       </button>
@@ -91,8 +105,14 @@ export function VehicleSettingsPanel({ vehicles, onVehiclesChange }: Props) {
         className={cn("border-t border-[var(--border)]", !open && "hidden")}
       >
         <div className="space-y-6 px-4 py-5 sm:px-5">
-          <VehicleForm onCreated={onVehiclesChange} />
-          <VehicleList vehicles={vehicles} onChange={onVehiclesChange} />
+          <VehicleForm
+            persistVehicle={persistVehicle}
+            userCoords={userCoords}
+          />
+          <VehicleList
+            vehicles={vehicles}
+            removeVehicle={removeVehicle}
+          />
         </div>
       </div>
     </div>
