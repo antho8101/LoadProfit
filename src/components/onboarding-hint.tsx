@@ -81,7 +81,7 @@ export function OnboardingHint({ vehicleCount, savedTripCount }: Props) {
             <p className="text-[var(--muted)]">{t("onboarding_step1_body")}</p>
             {!step1Done ? (
               <Link
-                href="/?section=vehicles"
+                href="/app?section=vehicles"
                 className="mt-1 inline-block text-sm font-medium text-[var(--accent)] underline-offset-2 hover:underline"
               >
                 {t("onboarding_addVehicle")}

@@ -13,7 +13,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const priceId = process.env.STRIPE_PRICE_ID_MONTHLY;
+  let plan: "monthly" | "yearly" = "monthly";
+  const ctype = request.headers.get("content-type") ?? "";
+  if (ctype.includes("application/json")) {
+    try {
+      const body = (await request.json()) as { plan?: string };
+      if (body?.plan === "yearly") plan = "yearly";
+    } catch {
+      /* default monthly */
+    }
+  }
+
+  const priceId =
+    plan === "yearly"
+      ? process.env.STRIPE_PRICE_ID_YEARLY
+      : process.env.STRIPE_PRICE_ID_MONTHLY;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!priceId || !appUrl) {
     return NextResponse.json(
@@ -48,11 +62,11 @@ export async function POST(request: Request) {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl.replace(/\/$/, "")}/?checkout=success`,
-    cancel_url: `${appUrl.replace(/\/$/, "")}/?checkout=canceled`,
-    metadata: { firebaseUid: uid },
+    success_url: `${appUrl.replace(/\/$/, "")}/app?checkout=success`,
+    cancel_url: `${appUrl.replace(/\/$/, "")}/app?checkout=canceled`,
+    metadata: { firebaseUid: uid, plan },
     subscription_data: {
-      metadata: { firebaseUid: uid },
+      metadata: { firebaseUid: uid, plan },
     },
     allow_promotion_codes: true,
   });

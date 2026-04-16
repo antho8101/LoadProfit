@@ -6,6 +6,42 @@ export type TripInsightRow = {
   createdAt: string;
 };
 
+/** Value story for upgrade / conversion UI — derived from {@link computeDashboardStats}. */
+export type UserValueMetrics = {
+  /** Total saved trips (analyzed). */
+  tripsAnalyzed: number;
+  /** Sum of `profit` for trips where `profit > 0`. */
+  potentialProfitTotal: number;
+  /** Declined trips with `profit < 0`: sum of `abs(profit)`. */
+  lossesAvoidedTotal: number;
+};
+
+export type UserValueStoryKind = "empty" | "trips_only" | "rich";
+
+/** Maps dashboard stats to upgrade metrics without recomputing aggregates. */
+export function userValueMetricsFromStats(
+  stats: DashboardStats,
+): UserValueMetrics {
+  return {
+    tripsAnalyzed: stats.totalTrips,
+    potentialProfitTotal: stats.totalPotentialProfit,
+    lossesAvoidedTotal: stats.lossesAvoided,
+  };
+}
+
+/**
+ * - `empty`: no saved trips — show onboarding-style fallback.
+ * - `trips_only`: trips saved but no positive-profit sum and no declined-loss avoidance yet.
+ * - `rich`: at least one monetary insight to show without awkward zeros.
+ */
+export function userValueStoryKind(metrics: UserValueMetrics): UserValueStoryKind {
+  if (metrics.tripsAnalyzed === 0) return "empty";
+  if (metrics.potentialProfitTotal > 0 || metrics.lossesAvoidedTotal > 0) {
+    return "rich";
+  }
+  return "trips_only";
+}
+
 export type DashboardStats = {
   totalTrips: number;
   acceptedCount: number;

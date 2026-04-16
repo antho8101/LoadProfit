@@ -37,8 +37,30 @@ Les composants dans `src/components/ui/` reprennent une **structure proche de sh
 
 - **Accueil `/`** : réservé aux utilisateurs connectés ; sinon redirection vers **`/auth`**.
 - **Véhicules** et **courses enregistrées** : sous-collections Firestore `users/{uid}/vehicles` et `users/{uid}/trips`.
-- **Profil utilisateur** : document `users/{uid}` (email, nom, dates, `stripeCustomerId`, état d’abonnement).
+- **Profil utilisateur** : document `users/{uid}` (email, nom, dates, essai 30 jours, `stripeCustomerId`, état d’abonnement — voir ci-dessous).
 - **Facturation** : l’état payant affiché dans l’app provient des **webhooks Stripe** (mise à jour du document utilisateur). Ne pas se fier uniquement au client.
+
+#### Essai gratuit, lecture seule, abonnement
+
+- **Nouveau compte** : à la première création du document `users/{uid}` (`ensureUserDocument`), l’utilisateur reçoit automatiquement un **essai de 30 jours** (`subscriptionStatus: trialing`, `trialStartAt` / `trialEndsAt`, `subscriptionPlan: none`) sans carte bancaire.
+- **Pendant l’essai** : accès complet aux actions « productives » (calculs, enregistrement de trajets, véhicules).
+- **Après la fin d’essai sans abonnement actif** : le document peut passer à `subscriptionStatus: expired` (synchro client via `expireAppTrialIfNeeded` lorsque `trialEndsAt` est dépassé). L’utilisateur reste en **lecture seule** : consultation du tableau de bord, de l’historique et des véhicules ; **pas** de nouveaux calculs, sauvegardes, ni création / modification / suppression de véhicules.
+- **Abonnement Stripe actif** : `subscriptionStatus: active` (y compris période d’essai **Stripe** — mappée en `active` côté Firestore pour éviter la confusion avec l’essai « app »). Les actions productives sont à nouveau autorisées.
+- **Anciens comptes** sans champs d’essai (`subscriptionStatus: none` et pas de `trialEndsAt`) : **accès complet** conservé (comportement « legacy ») pour ne pas bloquer les utilisateurs existants.
+
+Champs utiles sur `users/{uid}` pour la facturation / essai :
+
+| Champ | Rôle |
+|--------|------|
+| `createdAt` | ISO — création du profil |
+| `trialStartAt` | ISO — début de l’essai app (30 j) |
+| `trialEndsAt` | ISO — fin de l’essai app |
+| `subscriptionStatus` | `trialing` \| `active` \| `past_due` \| `canceled` \| `expired` \| `inactive` \| `none` \| … |
+| `subscriptionPlan` | `none` \| `monthly` \| `yearly` |
+| `subscriptionCurrentPeriodEnd` | ISO — fin de période Stripe en cours |
+| `stripeCustomerId` | ID client Stripe |
+
+Logique centralisée côté app : `src/lib/billing/access.ts` (`computeBillingAccess`, etc.).
 - **Géolocalisation** : toujours en **localStorage** (hors compte).
 
 ### Variables Firebase (client — `NEXT_PUBLIC_*`)
@@ -64,7 +86,8 @@ Les composants dans `src/components/ui/` reprennent une **structure proche de sh
 | `STRIPE_SECRET_KEY` | Clé secrète |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique (réserve extensions futures) |
 | `STRIPE_WEBHOOK_SECRET` | Secret du endpoint webhook |
-| `STRIPE_PRICE_ID_MONTHLY` | ID du prix d’abonnement récurrent |
+| `STRIPE_PRICE_ID_MONTHLY` | ID du prix abonnement **mensuel** |
+| `STRIPE_PRICE_ID_YEARLY` | ID du prix abonnement **annuel** (ex. −20 % vs mensuel, configuré dans le tableau de bord Stripe) |
 | `NEXT_PUBLIC_APP_URL` | Base URL (success/cancel Checkout), ex. `http://localhost:3000` |
 
 **Webhook :** créer un endpoint dans Stripe pointant vers `https://<domaine>/api/stripe/webhook` ; souscrire à `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`. En local : `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
@@ -77,21 +100,26 @@ Les composants dans `src/components/ui/` reprennent une **structure proche de sh
 
 ### Flux Stripe (résumé)
 
-1. Utilisateur authentifié → **Upgrade** → API vérifie le jeton → client Stripe + session Checkout.
-2. Paiement sur Stripe → webhooks → mise à jour **`users/{uid}`** (`subscriptionStatus`, période, plan).
+1. Utilisateur authentifié → **S’abonner (mensuel ou annuel)** → `POST /api/stripe/create-checkout-session` avec corps JSON `{ "plan": "monthly" \| "yearly" }` → API vérifie le jeton → client Stripe + session Checkout (prix selon `STRIPE_PRICE_ID_*`).
+2. Paiement sur Stripe → webhooks → mise à jour **`users/{uid}`** (`subscriptionStatus`, `subscriptionPlan` dérivé des IDs de prix, `subscriptionCurrentPeriodEnd`, etc.).
 
-### Tests manuels (compte + billing)
+**Annulation** : l’événement `customer.subscription.deleted` remet le plan à `none` et le statut à `canceled` ; sans autre droit actif, l’app repasse en **lecture seule** (même règles qu’après essai).
 
-1. Créer un compte email/mot de passe  
-2. Se connecter email/mot de passe  
-3. Se connecter avec Google  
-4. Se déconnecter  
-5. Recharger la page — session Firebase persistée  
-6. Ajouter un véhicule — présent après rechargement  
-7. Enregistrer une course (accepté/refusé) — présente après rechargement  
-8. Lancer un Checkout test (cartes [Stripe test](https://stripe.com/docs/testing))  
-9. Vérifier que le webhook met à jour le statut dans le panneau Compte  
-10. Vérifier `users/{uid}` dans la console Firestore après événements  
+### Tests manuels (compte + billing + essai)
+
+1. Nouvel utilisateur **email/mot de passe** : document Firestore avec essai **30 jours** (`trialing`, `trialEndsAt` ≈ +30 j).  
+2. Nouvel utilisateur **Google** : même comportement à la première connexion.  
+3. Utilisateur **existant** (déjà un `users/{uid}`) : **pas** de réinitialisation de l’essai.  
+4. Bannière d’essai : jours restants cohérents avec `trialEndsAt`.  
+5. Pendant l’essai : calculs, sauvegarde de trajets, véhicules OK.  
+6. Après expiration **sans** abonnement : mode **lecture seule** (pas de nouveau calcul ni sauvegarde ni mutation véhicules) ; données toujours visibles.  
+7. Checkout **mensuel** et **annuel** (Stripe test) → redirection paiement.  
+8. Webhook : `users/{uid}` mis à jour (`active`, `subscriptionPlan`, période).  
+9. Utilisateur abonné : accès productif rétabli.  
+10. Abonnement supprimé / annulé (webhook) : retour lecture seule si plus d’accès actif.  
+11. (À confirmer en prod) **Impayé** : statut `past_due` / problème de facturation → lecture seule jusqu’à régularisation.
+
+Tests généraux utiles : connexion email/mot de passe, Google, déconnexion, persistance de session, véhicules et historique synchronisés.
 
 ## Lancer le projet en local
 
@@ -139,6 +167,7 @@ LoadProfit/
     │   ├── app-shell.tsx    # App connectée (Firestore + sections)
     │   ├── auth-form.tsx
     │   ├── account-panel.tsx
+    │   ├── trial-banner.tsx
     │   ├── trip-calculator-form.tsx
     │   ├── trip-results.tsx
     │   ├── trip-history.tsx
@@ -159,6 +188,7 @@ LoadProfit/
     │   ├── firebase/        # Client Auth/Firestore + admin (serveur)
     │   ├── storage/trip-history.ts  # Fallback local (hors flux principal cloud)
     │   ├── storage/vehicles.ts      # Helpers enrichissement (toujours utilisés côté client)
+    │   ├── billing/access.ts # Règles d’accès essai / abonnement / lecture seule
     │   ├── dashboard.ts     # Agrégats pour le tableau de bord
     │   ├── format.ts        # Montants, km, pourcentages (locale en-US, EUR)
     │   └── utils.ts       # Utilitaire `cn()` (classes CSS)

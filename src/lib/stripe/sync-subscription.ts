@@ -1,4 +1,4 @@
-import type { SubscriptionStatus } from "@/types/user-doc";
+import type { SubscriptionPlan, SubscriptionStatus } from "@/types/user-doc";
 import type Stripe from "stripe";
 import type { Firestore } from "firebase-admin/firestore";
 
@@ -12,8 +12,9 @@ function mapStripeStatus(
       return "past_due";
     case "canceled":
       return "canceled";
+    /** Stripe subscription trial — treat as paid access (distinct from app 30-day trial). */
     case "trialing":
-      return "trialing";
+      return "active";
     case "unpaid":
       return "unpaid";
     case "incomplete":
@@ -22,6 +23,14 @@ function mapStripeStatus(
     default:
       return "none";
   }
+}
+
+function planFromStripePrice(priceId: string | undefined): SubscriptionPlan {
+  const monthly = process.env.STRIPE_PRICE_ID_MONTHLY;
+  const yearly = process.env.STRIPE_PRICE_ID_YEARLY;
+  if (priceId && monthly && priceId === monthly) return "monthly";
+  if (priceId && yearly && priceId === yearly) return "yearly";
+  return "none";
 }
 
 /** Writes subscription fields from a Stripe Subscription to `users/{uid}`. */
@@ -33,10 +42,8 @@ export async function applySubscriptionToUserDoc(
 ): Promise<void> {
   const item = sub.items.data[0];
   const price = item?.price;
-  const plan =
-    (typeof price?.nickname === "string" && price.nickname) ||
-    (typeof price?.id === "string" && price.id) ||
-    null;
+  const priceId = typeof price?.id === "string" ? price.id : undefined;
+  const plan = planFromStripePrice(priceId);
 
   const periodEndSec =
     "current_period_end" in sub &&

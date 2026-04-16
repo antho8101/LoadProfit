@@ -65,7 +65,7 @@ export async function POST(request: Request) {
               {
                 stripeCustomerId: custId,
                 subscriptionStatus: "canceled",
-                subscriptionPlan: null,
+                subscriptionPlan: "none",
                 subscriptionCurrentPeriodEnd: null,
                 updatedAt: new Date().toISOString(),
               },

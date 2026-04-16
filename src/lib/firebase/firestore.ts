@@ -40,14 +40,18 @@ export async function ensureUserDocument(
   const ref = userDocRef(db, uid);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
+    const now = new Date();
+    const trialEnds = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     await setDoc(ref, {
       email,
       displayName,
-      createdAt: new Date().toISOString(),
-      subscriptionStatus: "none" as const,
-      subscriptionPlan: null,
+      createdAt: now.toISOString(),
+      subscriptionStatus: "trialing" as const,
+      subscriptionPlan: "none",
       subscriptionCurrentPeriodEnd: null,
       stripeCustomerId: null,
+      trialStartAt: now.toISOString(),
+      trialEndsAt: trialEnds.toISOString(),
       updatedAt: serverTimestamp(),
     });
     return;
@@ -57,6 +61,28 @@ export async function ensureUserDocument(
     {
       email,
       displayName,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+/** Marks app trial as ended (client sync when trialEndsAt is in the past). */
+export async function expireAppTrialIfNeeded(uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const ref = userDocRef(db, uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const data = snap.data() as UserDoc;
+  if (data.subscriptionStatus !== "trialing") return;
+  const end = data.trialEndsAt;
+  if (!end) return;
+  const endMs = new Date(end).getTime();
+  if (!Number.isFinite(endMs) || Date.now() < endMs) return;
+  await setDoc(
+    ref,
+    {
+      subscriptionStatus: "expired" as const,
       updatedAt: serverTimestamp(),
     },
     { merge: true },

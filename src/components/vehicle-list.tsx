@@ -52,13 +52,16 @@ function effectiveFuelPricePerLiter(v: VehicleProfile): number {
 export function VehicleList({
   vehicles,
   removeVehicle,
+  productiveAllowed = true,
 }: {
   vehicles: VehicleProfile[];
   removeVehicle: (id: string) => Promise<void>;
+  productiveAllowed?: boolean;
 }) {
   const { t, effectiveLocale } = useLocale();
 
   async function handleDelete(id: string) {
+    if (!productiveAllowed) return;
     if (
       typeof window !== "undefined" &&
       !window.confirm(t("vehicle_confirmDelete"))
@@ -100,6 +103,7 @@ export function VehicleList({
                       type="button"
                       variant="outline"
                       className="shrink-0"
+                      disabled={!productiveAllowed}
                       onClick={() => void handleDelete(v.id)}
                     >
                       Delete
@@ -202,6 +206,7 @@ export function VehicleList({
                         <Button
                           type="button"
                           variant="outline"
+                          disabled={!productiveAllowed}
                           onClick={() => void handleDelete(v.id)}
                         >
                           {t("vehicles_delete")}

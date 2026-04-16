@@ -3,6 +3,7 @@
 import { formatEur, formatPercent } from "@/lib/format";
 import { useLocale } from "@/contexts/locale-context";
 import type { DashboardStats } from "@/lib/dashboard";
+import { UpgradeValueSection } from "@/components/upgrade-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { UiLocale } from "@/lib/i18n/locale-types";
 
@@ -64,6 +65,15 @@ export function DashboardSummary({ stats }: { stats: DashboardStats }) {
         </p>
       </CardHeader>
       <CardContent className="space-y-8">
+        {stats.totalTrips > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+              {t("dashboard_valueStripCaption")}
+            </p>
+            <UpgradeValueSection stats={stats} density="compact" />
+          </div>
+        ) : null}
+
         <div className="space-y-4 rounded-xl border border-emerald-200/80 bg-emerald-50/90 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/35">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300/90">

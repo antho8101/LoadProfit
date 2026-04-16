@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useLocale } from "@/contexts/locale-context";
 import {
   deleteAllTrips,
+  expireAppTrialIfNeeded,
   saveTrip,
   saveVehicle,
   subscribeTrips,
@@ -20,6 +21,10 @@ import {
   subscribeVehicles,
   deleteVehicle as deleteVehicleFs,
 } from "@/lib/firebase/firestore";
+import {
+  computeBillingAccess,
+  shouldExpireAppTrial,
+} from "@/lib/billing/access";
 import { enrichAllVehiclesWithLiveFuel } from "@/lib/fuel/live-vehicle-fuel";
 import {
   loadLocationPreferences,
@@ -39,6 +44,7 @@ import { OnboardingHint } from "@/components/onboarding-hint";
 import { VehicleSettingsPanel } from "@/components/vehicle-settings-panel";
 import { LocationPrompt } from "@/components/location-prompt";
 import { AccountPanel } from "@/components/account-panel";
+import { TrialBanner } from "@/components/trial-banner";
 
 export function AppShell() {
   const { user, loading, getIdToken } = useAuth();
@@ -87,6 +93,18 @@ export function AppShell() {
     };
   }, [uid]);
 
+  const billingAccess = useMemo(
+    () => computeBillingAccess(profile),
+    [profile],
+  );
+
+  useEffect(() => {
+    if (!uid || !profile) return;
+    if (shouldExpireAppTrial(profile)) {
+      void expireAppTrialIfNeeded(uid);
+    }
+  }, [uid, profile]);
+
   const userCoords = useMemo(() => {
     if (
       locationPrefs.consent === "granted" &&
@@ -120,29 +138,33 @@ export function AppShell() {
   const persistVehicle = useCallback(
     async (v: VehicleStored) => {
       if (!uid) return;
+      if (!billingAccess.canUseProductive) return;
       await saveVehicle(uid, v);
     },
-    [uid],
+    [uid, billingAccess.canUseProductive],
   );
 
   const removeVehicle = useCallback(
     async (id: string) => {
       if (!uid) return;
+      if (!billingAccess.canUseProductive) return;
       await deleteVehicleFs(uid, id);
     },
-    [uid],
+    [uid, billingAccess.canUseProductive],
   );
 
   const persistTrip = useCallback(
     async (trip: SavedTrip) => {
       if (!uid) return;
+      if (!billingAccess.canUseProductive) return;
       await saveTrip(uid, trip);
     },
-    [uid],
+    [uid, billingAccess.canUseProductive],
   );
 
   const handleClearTrips = useCallback(async () => {
     if (!uid) return;
+    if (!billingAccess.canUseProductive) return;
     if (
       typeof window !== "undefined" &&
       !window.confirm(t("trips_confirmClear"))
@@ -150,7 +172,7 @@ export function AppShell() {
       return;
     }
     await deleteAllTrips(uid);
-  }, [uid, t]);
+  }, [uid, billingAccess.canUseProductive, t]);
 
   const stats = useMemo(() => computeDashboardStats(trips), [trips]);
 
@@ -168,6 +190,7 @@ export function AppShell() {
 
   const handleReuseTrip = useCallback(
     (trip: SavedTrip) => {
+      if (!billingAccess.canUseProductive) return;
       const params = new URLSearchParams();
       params.set("section", "home");
       const from = trip.departureCity.trim();
@@ -180,9 +203,9 @@ export function AppShell() {
         if (match) vehicleId = match.id;
       }
       if (vehicleId) params.set("reuseVehicle", vehicleId);
-      router.push(`/?${params.toString()}#trip-calculator`);
+      router.push(`/app?${params.toString()}#trip-calculator`);
     },
-    [router, liveVehicles],
+    [router, liveVehicles, billingAccess.canUseProductive],
   );
 
   if (loading || !user) {
@@ -219,6 +242,8 @@ export function AppShell() {
             </div>
           ) : null}
 
+          {profile ? <TrialBanner access={billingAccess} /> : null}
+
           {section === "home" ? (
             <div className="flex flex-col gap-8">
               <header className="order-1 space-y-2">
@@ -248,6 +273,7 @@ export function AppShell() {
                   vehiclesFuelLoading={vehiclesFuelLoading}
                   persistTrip={persistTrip}
                   routeReuse={routeReuse}
+                  productiveAllowed={billingAccess.canUseProductive}
                 />
               </div>
 
@@ -266,6 +292,7 @@ export function AppShell() {
                   trips={trips}
                   onClear={() => void handleClearTrips()}
                   onReuseTrip={handleReuseTrip}
+                  productiveAllowed={billingAccess.canUseProductive}
                 />
               </div>
             </div>
@@ -291,6 +318,7 @@ export function AppShell() {
                 persistVehicle={persistVehicle}
                 removeVehicle={removeVehicle}
                 initialOpen
+                productiveAllowed={billingAccess.canUseProductive}
               />
             </>
           ) : null}
@@ -314,6 +342,8 @@ export function AppShell() {
                   email={user.email}
                   profile={profile}
                   getIdToken={getIdToken}
+                  billingAccess={billingAccess}
+                  stats={stats}
                 />
               </div>
             </>

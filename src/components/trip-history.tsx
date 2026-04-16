@@ -109,11 +109,14 @@ export function TripHistory({
   trips,
   onClear,
   onReuseTrip,
+  productiveAllowed = true,
 }: {
   trips: SavedTrip[];
   onClear: () => void;
   /** Pre-fills the calculator with this route (and vehicle when matched). */
   onReuseTrip?: (trip: SavedTrip) => void;
+  /** When false, hides destructive / reuse actions (read-only trial expired). */
+  productiveAllowed?: boolean;
 }) {
   const { t, effectiveLocale } = useLocale();
   const empty = trips.length === 0;
@@ -134,8 +137,13 @@ export function TripHistory({
         <div className="min-w-0">
           <CardTitle>{t("history_title")}</CardTitle>
           <p className="text-sm text-[var(--muted)]">{t("history_subtitle")}</p>
+          {!productiveAllowed && !empty ? (
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {t("billing_readonly_history")}
+            </p>
+          ) : null}
         </div>
-        {!empty ? (
+        {!empty && productiveAllowed ? (
           <Button
             variant="outline"
             onClick={onClear}
@@ -164,7 +172,7 @@ export function TripHistory({
                 <li key={row.id}>
                   <TripHistoryCard
                     row={row}
-                    onReuse={onReuseTrip}
+                    onReuse={productiveAllowed ? onReuseTrip : undefined}
                     tr={t}
                     locale={effectiveLocale}
                   />
@@ -226,7 +234,7 @@ export function TripHistory({
                         <DecisionBadge decision={row.decision} />
                       </td>
                       <td className="py-3 align-top">
-                        {onReuseTrip ? (
+                        {productiveAllowed && onReuseTrip ? (
                           <Button
                             type="button"
                             variant="outline"

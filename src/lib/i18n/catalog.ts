@@ -41,6 +41,10 @@ export const catalog = {
     en: "Subscription and sign-in.",
     fr: "Abonnement et connexion.",
   },
+  account_legacyNote: {
+    en: "Full access (early account, no trial window)",
+    fr: "Accès complet (compte initial, sans fenêtre d’essai)",
+  },
 
   checkout_success: {
     en: "Checkout completed. Subscription status will update in a few seconds after Stripe confirms the payment.",
@@ -77,6 +81,134 @@ export const catalog = {
   sub_past_due: { en: "Past due", fr: "Impayé" },
   sub_canceled: { en: "Canceled", fr: "Annulé" },
   sub_unpaid: { en: "Unpaid", fr: "Non payé" },
+  sub_expired: {
+    en: "Trial ended — read-only access",
+    fr: "Essai terminé — accès en lecture seule",
+  },
+  sub_inactive: { en: "Inactive", fr: "Inactif" },
+  sub_appTrial: { en: "Free trial (app)", fr: "Essai gratuit (app)" },
+
+  plan_monthly: { en: "Monthly", fr: "Mensuel" },
+  plan_yearly: { en: "Yearly", fr: "Annuel" },
+  plan_yearlyBadge: {
+    en: "≈ 20% off vs monthly",
+    fr: "≈ −20 % vs mensuel",
+  },
+
+  billing_trialLine: {
+    en: "Free trial — {{days}} days remaining",
+    fr: "Essai gratuit — {{days}} jours restants",
+  },
+  billing_trialHint: {
+    en: "Full access during your trial. Subscribe anytime to keep going after it ends.",
+    fr: "Accès complet pendant l’essai. Abonnez-vous quand vous voulez pour continuer ensuite.",
+  },
+  billing_billingIssue: {
+    en: "We could not renew your subscription. Your account is in read-only mode until billing is resolved.",
+    fr: "Nous n’avons pas pu renouveler votre abonnement. Le compte est en lecture seule jusqu’à régularisation.",
+  },
+  billing_billingIssueHint: {
+    en: "Update your payment method in Stripe, or choose a plan again below.",
+    fr: "Mettez à jour votre moyen de paiement sur Stripe, ou choisissez un forfait ci-dessous.",
+  },
+  billing_readOnlyIntro: {
+    en: "Your free trial has ended. Your saved trips and vehicles stay available to view.",
+    fr: "Votre essai gratuit est terminé. Vos trajets et véhicules enregistrés restent consultables.",
+  },
+  billing_readOnlySub: {
+    en: "Subscribe to keep calculating new trips, saving decisions, and managing vehicles.",
+    fr: "Abonnez-vous pour continuer à calculer des trajets, enregistrer des décisions et gérer les véhicules.",
+  },
+  billing_viewPlans: {
+    en: "View plans & subscribe",
+    fr: "Voir les offres et s’abonner",
+  },
+  billing_readonly_calculator: {
+    en: "Your free trial has ended. Subscribe to create new trip calculations.",
+    fr: "Votre essai gratuit est terminé. Abonnez-vous pour lancer de nouveaux calculs de trajet.",
+  },
+  billing_readonly_vehicles: {
+    en: "Read-only mode: subscribe to add or edit vehicles.",
+    fr: "Lecture seule : abonnez-vous pour ajouter ou modifier des véhicules.",
+  },
+  billing_readonly_decision: {
+    en: "Subscribe to save accept/decline decisions to your history.",
+    fr: "Abonnez-vous pour enregistrer vos décisions (accepté / refusé) dans l’historique.",
+  },
+  billing_readonly_history: {
+    en: "Subscribe to clear history or reuse a route in the calculator.",
+    fr: "Abonnez-vous pour vider l’historique ou réutiliser un trajet dans le calculateur.",
+  },
+
+  account_paywallTitle: {
+    en: "Continue using LoadProfit",
+    fr: "Continuez à utiliser LoadProfit",
+  },
+  account_paywallBody: {
+    en: "Your free trial has ended. Subscribe to keep calculating trips, saving decisions, and managing vehicles.",
+    fr: "Votre essai gratuit est terminé. Abonnez-vous pour continuer à calculer des trajets, enregistrer vos décisions et gérer vos véhicules.",
+  },
+  account_valueTrips: {
+    en: "You have analyzed {{count}} saved trips.",
+    fr: "Vous avez analysé {{count}} trajets enregistrés.",
+  },
+  account_valueLosses: {
+    en: "You have avoided about {{amount}} in losses (declined negative trips).",
+    fr: "Vous avez évité environ {{amount}} de pertes (refus de trajets déficitaires).",
+  },
+  account_trialEnds: {
+    en: "Trial ends",
+    fr: "Fin de l’essai",
+  },
+  account_daysLeft: {
+    en: "{{days}} days left",
+    fr: "{{days}} jours restants",
+  },
+  account_subscribeMonthly: {
+    en: "Subscribe monthly",
+    fr: "S’abonner au mensuel",
+  },
+  account_subscribeYearly: {
+    en: "Subscribe yearly",
+    fr: "S’abonner à l’annuel",
+  },
+  account_keepReadOnly: {
+    en: "Keep read-only access for now",
+    fr: "Rester en lecture seule pour l’instant",
+  },
+  account_planRenewal: {
+    en: "Renews or ends on",
+    fr: "Renouvellement ou fin le",
+  },
+
+  upgrade_activityTitle: {
+    en: "Your activity with LoadProfit",
+    fr: "Votre activité avec LoadProfit",
+  },
+  upgrade_metricTripsLabel: {
+    en: "Trips analyzed",
+    fr: "Trajets analysés",
+  },
+  upgrade_metricProfitLabel: {
+    en: "Potential profit (profitable trips)",
+    fr: "Profit potentiel (trajets rentables)",
+  },
+  upgrade_metricLossesLabel: {
+    en: "Losses avoided (declined negative trips)",
+    fr: "Pertes évitées (refus de trajets déficitaires)",
+  },
+  upgrade_fallbackInsight: {
+    en: "Start tracking your trips to unlock insights.",
+    fr: "Enregistrez vos trajets pour afficher ces indicateurs.",
+  },
+  upgrade_tripsOnlyHint: {
+    en: "Record accept or decline on your saved trips to see profit totals and losses avoided.",
+    fr: "Enregistrez « accepté » ou « refusé » sur vos trajets pour voir le profit cumulé et les pertes évitées.",
+  },
+  dashboard_valueStripCaption: {
+    en: "What you have already gained from using LoadProfit",
+    fr: "Ce que vous avez déjà retiré de LoadProfit",
+  },
 
   locale_sectionTitle: { en: "Language", fr: "Langue" },
   locale_sectionHint: {

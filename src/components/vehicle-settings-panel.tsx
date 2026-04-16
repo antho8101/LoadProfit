@@ -15,6 +15,8 @@ type Props = {
   removeVehicle: (id: string) => Promise<void>;
   /** When opened from the Vehicles page, start expanded. */
   initialOpen?: boolean;
+  /** When false, block creating/editing/deleting vehicles. */
+  productiveAllowed?: boolean;
 };
 
 /**
@@ -28,6 +30,7 @@ export function VehicleSettingsPanel({
   persistVehicle,
   removeVehicle,
   initialOpen = false,
+  productiveAllowed = true,
 }: Props) {
   const { t } = useLocale();
   const [open, setOpen] = useState(initialOpen);
@@ -108,10 +111,12 @@ export function VehicleSettingsPanel({
           <VehicleForm
             persistVehicle={persistVehicle}
             userCoords={userCoords}
+            productiveAllowed={productiveAllowed}
           />
           <VehicleList
             vehicles={vehicles}
             removeVehicle={removeVehicle}
+            productiveAllowed={productiveAllowed}
           />
         </div>
       </div>

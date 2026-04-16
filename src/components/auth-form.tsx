@@ -99,7 +99,7 @@ export function AuthForm() {
       } else {
         await signInWithEmail(e, password);
       }
-      router.replace("/");
+      router.replace("/app");
       router.refresh();
     } catch (err: unknown) {
       const { code, message } = getFirebaseAuthErr(err);
@@ -122,7 +122,7 @@ export function AuthForm() {
     setLoading(true);
     try {
       await signInWithGoogle();
-      router.replace("/");
+      router.replace("/app");
       router.refresh();
     } catch (err: unknown) {
       const { code, message } = getFirebaseAuthErr(err);

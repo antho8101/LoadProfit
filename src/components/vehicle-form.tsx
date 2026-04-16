@@ -29,9 +29,11 @@ function formatFuelPriceForInput(value: number): string {
 export function VehicleForm({
   persistVehicle,
   userCoords,
+  productiveAllowed = true,
 }: {
   persistVehicle: (v: VehicleStored) => Promise<void>;
   userCoords: { lat: number; lng: number } | null;
+  productiveAllowed?: boolean;
 }) {
   const { t } = useLocale();
 
@@ -215,6 +217,7 @@ export function VehicleForm({
 
   async function handleSubmit(ev: FormEvent) {
     ev.preventDefault();
+    if (!productiveAllowed) return;
     const consumption = parseDecimal(consumptionStr);
     const fuelPrice =
       fuelPriceSource === "manual" ? parseDecimal(fuelPriceStr) : 0;
@@ -293,7 +296,16 @@ export function VehicleForm({
         <CardDescription>{t("vehicle_addDesc")}</CardDescription>
       </CardHeader>
       <CardContent>
+        {!productiveAllowed ? (
+          <div className="mb-4 rounded-md border border-[var(--border)] bg-neutral-50 px-3 py-2 text-sm text-[var(--foreground)] dark:bg-neutral-950">
+            {t("billing_readonly_vehicles")}
+          </div>
+        ) : null}
         <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6" noValidate>
+          <fieldset
+            disabled={!productiveAllowed}
+            className="min-w-0 space-y-6 border-0 p-0"
+          >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="v-name">{t("vehicle_name")}</Label>
@@ -535,9 +547,10 @@ export function VehicleForm({
             </div>
           </div>
 
-          <Button type="submit" variant="default" disabled={saving}>
+          <Button type="submit" variant="default" disabled={saving || !productiveAllowed}>
             {t("vehicle_save")}
           </Button>
+          </fieldset>
         </form>
       </CardContent>
     </Card>

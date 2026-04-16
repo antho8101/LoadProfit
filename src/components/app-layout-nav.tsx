@@ -84,15 +84,15 @@ export function AppLayoutNav() {
           LoadProfit
         </p>
         <nav className="flex flex-col gap-1" aria-label={t("nav_ariaLabel")}>
-          <Link href="/" className={itemClass("home")}>
+          <Link href="/app" className={itemClass("home")}>
             <NavIcon name="home" />
             {t("nav_home")}
           </Link>
-          <Link href="/?section=vehicles" className={itemClass("vehicles")}>
+          <Link href="/app?section=vehicles" className={itemClass("vehicles")}>
             <NavIcon name="truck" />
             {t("nav_vehicles")}
           </Link>
-          <Link href="/?section=account" className={itemClass("account")}>
+          <Link href="/app?section=account" className={itemClass("account")}>
             <NavIcon name="user" />
             {t("nav_account")}
           </Link>
@@ -103,15 +103,15 @@ export function AppLayoutNav() {
         className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-[var(--border)] bg-[var(--card)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
         aria-label={t("nav_ariaLabel")}
       >
-        <Link href="/" className={mobileItemClass("home")}>
+        <Link href="/app" className={mobileItemClass("home")}>
           <NavIcon name="home" />
           {t("nav_home")}
         </Link>
-        <Link href="/?section=vehicles" className={mobileItemClass("vehicles")}>
+        <Link href="/app?section=vehicles" className={mobileItemClass("vehicles")}>
           <NavIcon name="truck" />
           {t("nav_vehicles")}
         </Link>
-        <Link href="/?section=account" className={mobileItemClass("account")}>
+        <Link href="/app?section=account" className={mobileItemClass("account")}>
           <NavIcon name="user" />
           {t("nav_account")}
         </Link>

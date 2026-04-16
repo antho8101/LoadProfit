@@ -55,6 +55,7 @@ export function TripResults({
   decisionDisabled,
   decisionHint,
   computedAtMs,
+  readOnlyMessage,
 }: {
   result: TripCalculationResult | null;
   onAccept: () => void;
@@ -64,6 +65,8 @@ export function TripResults({
   decisionHint?: string;
   /** When this estimate was produced (client clock). */
   computedAtMs?: number | null;
+  /** Shown when productive actions are blocked (e.g. trial ended). */
+  readOnlyMessage?: string;
 }) {
   const { t, effectiveLocale } = useLocale();
 
@@ -209,6 +212,11 @@ export function TripResults({
             </div>
             {decisionHint ? (
               <p className="text-xs text-[var(--muted)]">{decisionHint}</p>
+            ) : null}
+            {readOnlyMessage ? (
+              <p className="text-xs leading-relaxed text-[var(--muted)]">
+                {readOnlyMessage}
+              </p>
             ) : null}
           </div>
         ) : null}

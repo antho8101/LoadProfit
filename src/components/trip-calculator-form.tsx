@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { MagicAccentSubmit } from "@/components/ui/magic-accent-submit";
 import { inputClassName } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { MessageId } from "@/lib/i18n/catalog";
 import {
   Card,
   CardContent,
@@ -128,12 +129,18 @@ export function TripCalculatorForm({
   vehiclesFuelLoading,
   persistTrip,
   routeReuse = null,
+  productiveAllowed = true,
+  readOnlyMessageId = "billing_readonly_calculator",
 }: {
   vehicles: VehicleProfile[];
   vehiclesFuelLoading: boolean;
   persistTrip: (trip: SavedTrip) => Promise<void>;
   /** From URL: quick reuse of a past route (see TripHistory). */
   routeReuse?: RouteReusePrefill;
+  /** When false, blocks new calculations and saving decisions. */
+  productiveAllowed?: boolean;
+  /** i18n key for the notice above the form when read-only. */
+  readOnlyMessageId?: MessageId;
 }) {
   const { t, effectiveLocale } = useLocale();
 
@@ -324,6 +331,7 @@ export function TripCalculatorForm({
     forceAutomaticDistance?: boolean,
   ) {
     if (ev) ev.preventDefault();
+    if (!productiveAllowed) return;
     const useManualDistance = forceAutomaticDistance ? false : manualDistanceMode;
 
     const offered = parseDecimal(offeredStr);
@@ -495,6 +503,7 @@ export function TripCalculatorForm({
   }
 
   async function handleDecision(decision: "accepted" | "declined") {
+    if (!productiveAllowed) return;
     if (!result || !inputsAtCalc || resultInputKey === null) return;
     if (savedInputKey === resultInputKey) return;
 
@@ -523,6 +532,7 @@ export function TripCalculatorForm({
   }
 
   const canRecordDecision =
+    productiveAllowed &&
     Boolean(result && inputsAtCalc && resultInputKey !== null) &&
     savedInputKey !== resultInputKey;
 
@@ -587,11 +597,20 @@ export function TripCalculatorForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!productiveAllowed ? (
+            <div className="mb-4 rounded-md border border-[var(--border)] bg-neutral-50 px-3 py-2 text-sm text-[var(--foreground)] dark:bg-neutral-950">
+              {t(readOnlyMessageId)}
+            </div>
+          ) : null}
           <form
             onSubmit={(e) => void performProfitCheck(e)}
             className="space-y-4"
             noValidate
           >
+            <fieldset
+              disabled={!productiveAllowed}
+              className="min-w-0 space-y-4 border-0 p-0"
+            >
             <div className="grid gap-4 sm:grid-cols-2">
               <CityAutocompleteInput
                 id="departure"
@@ -704,7 +723,7 @@ export function TripCalculatorForm({
               <p className="text-xs text-[var(--muted)]">
                 {t("trip_vehicleHelp")}{" "}
                 <Link
-                  href="/?section=vehicles"
+                  href="/app?section=vehicles"
                   className="font-medium text-[var(--accent)] underline-offset-2 hover:underline"
                 >
                   {t("trip_addVehicles")}
@@ -808,10 +827,11 @@ export function TripCalculatorForm({
             <MagicAccentSubmit
               className="w-full sm:w-auto"
               type="submit"
-              disabled={calculating}
+              disabled={calculating || !productiveAllowed}
             >
               {calculating ? t("trip_checking") : t("trip_checkCta")}
             </MagicAccentSubmit>
+            </fieldset>
           </form>
         </CardContent>
       </Card>
@@ -824,6 +844,9 @@ export function TripCalculatorForm({
         decisionDisabled={!canRecordDecision}
         decisionHint={decisionHint}
         computedAtMs={resultComputedAt}
+        readOnlyMessage={
+          !productiveAllowed && result ? t("billing_readonly_decision") : undefined
+        }
       />
     </div>
   );
